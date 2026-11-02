@@ -66,3 +66,18 @@ def test_batch_closures_leave_close_times_but_are_listed(small_db):
     assert result["01_close_time_by_type"].iloc[0].closed_requests == 600
     assert result["01_close_time_by_type"].iloc[0].p90_days == 540.1
     assert result["07_bulk_closures"].iloc[0].requests == 300
+
+
+def test_hotspots_skip_points_shared_by_many_request_types(small_db):
+    con = connect()
+    con.execute("CREATE TEMP TABLE keys AS SELECT 'type' || i AS key FROM range(10) r(i)")
+    con.execute("INSERT INTO mart.dim_request_type SELECT key, key, true FROM keys")
+    con.execute(
+        """
+        INSERT INTO mart.fct_requests (request_type_key, neighborhood_key, created_at, is_duplicate, is_backlog, latitude, longitude)
+        SELECT key, 33101, TIMESTAMP '2025-03-03 09:00:00', false, false, 25.7, -80.2 FROM keys
+        """
+    )
+    hotspots = run_analysis.run_all(con)["05_repeat_hotspots"]
+    con.close()
+    assert "Pothole" not in set(hotspots.request_type)  # its point now hosts 11 types
