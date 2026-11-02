@@ -1,0 +1,7 @@
+miami311:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH', 'data/miami311.duckdb') }}"
+      threads: 4

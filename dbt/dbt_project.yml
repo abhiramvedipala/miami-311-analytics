@@ -1,0 +1,13 @@
+name: miami311
+version: "1.0"
+profile: miami311
+model-paths: [models]
+seed-paths: [seeds]
+macro-paths: [macros]
+models:
+  miami311:
+    staging: {+schema: staging, +materialized: table}
+    marts: {+schema: mart, +materialized: table}
+seeds:
+  miami311:
+    +schema: staging
