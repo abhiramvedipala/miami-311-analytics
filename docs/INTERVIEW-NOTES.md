@@ -82,3 +82,30 @@ Robust STL hid the biggest spikes, which are the storms I most wanted to find. A
 
 **Files to open**
 `src/anomaly.py`, `src/validate_anomaly.py`, `tests/test_anomaly.py`, `dbt/seeds/known_events.csv`
+
+## Phase 4: Dashboard
+
+**What I built**
+- A Streamlit app with tabs for overview KPIs, time to close by type and area, backlog aging, and anomalies.
+- A map of the requests behind any flagged week.
+- A Playwright script that exports screenshots to `docs/`.
+- An AppTest test that renders the app against a small database.
+
+**Key decisions**
+- *Why reuse `analysis/*.sql`?* The dashboard and the results cannot disagree, and there is one place to fix a query.
+- *Why Streamlit, not Tableau or Power BI?* It is free, runs from the repo, and anyone can reproduce it with one command. A BI tool would be better for many business users editing views.
+- *Why open a read-only connection per query?* DuckDB allows one writer, so the dashboard must not hold a lock while a refresh runs.
+- *Why Altair?* It ships with Streamlit, so it adds no dependency.
+
+**Hardest problem**
+Proving that the dashboard really works. The health endpoint in `check.sh` only shows that the server started, because Streamlit runs the page script only when a browser connects. So I added an AppTest test that runs the script and fails on any exception, and checks KPI values against known rows.
+
+**Likely questions**
+1. *What would you do differently for real users?* Add filters by department and date, plus precomputed tables so charts stay fast. I would also add authentication if the tool showed anything beyond public data.
+2. *Why show median rather than average on the bars?* Close times are heavily skewed, so a few very old tickets would drag an average upward. The p90 is in the table for anyone who wants the tail.
+3. *How do you stop people misreading the numbers?* Captions state the limits where they apply: closed requests only, new-system backlog only, and the 2024 system change on the volume chart.
+4. *How is it tested?* `AppTest` renders the page against a small database and checks for exceptions, KPI values and tab names. `check.sh` separately starts the real server and confirms that it answers and stops.
+5. *How would you deploy it?* Streamlit Community Cloud or a small container, with the DuckDB file copied from the weekly job. I left it local because hosting needs an account and the brief asked for local first.
+
+**Files to open**
+`dashboard/app.py`, `tests/test_dashboard.py`, `scripts/screenshots.py`
