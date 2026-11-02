@@ -27,3 +27,30 @@ The data looks like one dataset but is two. On 2024-08-11 the county changed sys
 
 **Files to open**
 `src/ingest.py`, `dbt/models/staging/stg_requests.sql`, `dbt/models/marts/fct_requests.sql`, `dbt/seeds/request_type_crosswalk.csv`, `tests/test_ingest.py`
+
+## Phase 2: SQL analysis
+
+**What I built**
+- Six questions in `analysis/*.sql`, each stating its question in its first line.
+- Median and p90 time to close by type and ZIP, using window functions.
+- Month-over-month volume, backlog aging, repeat-request hotspots and weekday/hour seasonality.
+- A runner that writes headline findings to `RESULTS.md`, with each section hashed so hand edits fail verification.
+
+**Key decisions**
+- *Why p90 as well as median?* The median shows the typical case. The p90 shows how bad slow cases get, which is what generates complaints.
+- *Why a 500 closed request minimum?* Without it, a rare type with a few old tickets tops every list.
+- *Why measure backlog age at the newest row, not today?* Results stay reproducible and do not drift with the run date.
+- *Why not count old-system open rows?* Those layers stopped getting updates, so an open status there may just be stale.
+
+**Hardest problem**
+Keeping the numbers honest rather than getting the SQL to run. Time to close only exists for closed requests, which understates waits, especially recently. A partial latest month reads as a collapse in volume. Old-system open rows would inflate the backlog. Each needed an explicit rule, and the first two are stated as limits or handled in the query.
+
+**Likely questions**
+1. *Why window functions for the percentiles?* `quantile_cont(...) OVER (PARTITION BY ...)` keeps the row-level input and lets me compute count, median and p90 over one named window. A `GROUP BY` would also work and is what I would use if nothing else needed the window; the ranking on top uses `rank()` either way.
+2. *How do you define a repeat request?* The same type at the same rounded coordinates, about 11 metres, within 30 days of the previous one, found with `lag()`. Some repeats are normal, such as bulky waste pickups, so this finds places to investigate rather than proving a failure.
+3. *How did you handle time zones?* The source stores UTC epochs. Staging converts to America/New_York, including daylight saving, so hourly patterns reflect local behaviour.
+4. *What is the survivorship problem here?* Recent requests that closed quickly appear in the data while slow ones are still open. So recent medians look better than they are. A survival model such as Kaplan-Meier would handle this properly, and that is my next step.
+5. *How do you know the SQL is right?* Tests run each query on a small mart with answers known by construction, such as 600 requests taking 1 to 600 days, where the median must be 300.5. Duplicates planted with extreme values prove the filters work.
+
+**Files to open**
+`analysis/01_close_time_by_type.sql`, `analysis/05_repeat_hotspots.sql`, `src/run_analysis.py`, `src/results.py`, `tests/test_analysis.py`
