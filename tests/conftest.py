@@ -27,6 +27,7 @@ UNION ALL  -- Backlog: 10 days old and 400 days old, measured at the newest row.
 SELECT 'm', 33102, TIMESTAMP '2025-04-20 10:00:00', NULL, false, true, 25.9, -80.1
 UNION ALL
 SELECT 'm', 33102, TIMESTAMP '2024-03-26 10:00:00', NULL, false, true, 25.9, -80.0;
+ALTER TABLE mart.fct_requests ADD COLUMN is_bulk_close BOOLEAN DEFAULT false;
 """
 
 

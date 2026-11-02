@@ -49,3 +49,18 @@ def test_repeats_within_30_days_are_counted_at_one_point(small_db):
 def test_weekday_hour_uses_busiest_slot(small_db):
     busiest = frames()["06_weekday_hour"].sort_values("requests", ascending=False).iloc[0]
     assert busiest.weekday == "Wednesday" and busiest.hour == 10
+
+
+def test_batch_closures_leave_close_times_but_are_listed(small_db):
+    con = connect()
+    con.execute(
+        """
+        INSERT INTO mart.fct_requests
+        SELECT 'p', 33101, TIMESTAMP '2025-01-01 09:00:00', 9000.0, false, false, 25.1, -80.1, true FROM range(300)
+        """
+    )
+    result = run_analysis.run_all(con)
+    con.close()
+    assert result["01_close_time_by_type"].iloc[0].closed_requests == 600
+    assert result["01_close_time_by_type"].iloc[0].p90_days == 540.1
+    assert result["07_bulk_closures"].iloc[0].requests == 300
