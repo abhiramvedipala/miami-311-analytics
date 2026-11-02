@@ -33,3 +33,39 @@ flowchart LR
 ```
 
 The loader pages through the county's layers and upserts rows into a raw DuckDB table as JSON. dbt maps the two source schemas to shared columns in staging, then builds a fact table and two dimensions, with tests that fail the build on bad data. SQL files answer the analysis questions, and the anomaly script scores weekly volumes. Scripts write every reported number to `RESULTS.md`, and the dashboard reads the same mart and the same SQL files.
+
+## Tech stack
+
+| Tool | What it's used for | Why I chose it |
+|---|---|---|
+| Python | Ingestion, anomaly detection, reports | Simple to read, with the libraries this work needs |
+| DuckDB | Storage and queries | One file, no server, fast at this size |
+| dbt-duckdb | Staging, marts and data tests | Versioned SQL with tests that fail loudly |
+| statsmodels | STL decomposition | An explainable expected-versus-actual baseline |
+| Streamlit and Altair | Dashboard | Free, and runs from the repo with one command |
+| Playwright | Dashboard screenshots | Repeatable images from a headless browser |
+| pytest | Tests | Plain and familiar |
+| GitHub Actions | CI and the weekly refresh | Lives with the code and needs no extra account |
+| uv and Make | Install and run commands | Provides Python 3.12 and gives one command to run |
+
+## Quick start
+
+You need [uv](https://docs.astral.sh/uv/) and `make`.
+
+```bash
+make all
+```
+
+This installs everything, downloads the live data (over an hour the first time), builds and tests the models, and writes the results. Later runs fetch only what changed.
+
+To try the whole pipeline offline on generated rows, in about a minute:
+
+```bash
+make sample
+```
+
+To open the dashboard after `make all`:
+
+```bash
+make dashboard
+```
