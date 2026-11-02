@@ -15,3 +15,4 @@ One line each: decision + why.
 - Private build notes stay out of the repo, because the project does not need them.
 - uv is the only install prerequisite, because it provides Python 3.12 (system Python is 3.14, too new for dbt).
 - Priority codes HURRACT and MH map to Other and nulls to Unspecified, because their meaning is undocumented and rows are few; any new code still fails the build.
+- Closures of 200 or more requests of one type in a day with a median age of 60 days or more count as batch clean-up and are left out of close times, because one such batch made a 4-day median type look like the worst p90 in the county; the same largest batches appear at every threshold tested.
