@@ -29,6 +29,7 @@ def facts(con):
         "old_share": float(backlog[backlog.age_bucket == "Over 365 days"].share_pct.sum()),
         "busiest": frames["06_weekday_hour"].sort_values("requests", ascending=False).iloc[0],
         "hotspot": frames["05_repeat_hotspots"].iloc[0] if len(frames["05_repeat_hotspots"]) else None,
+        "batches": frames["07_bulk_closures"],
         "flags": flags,
     }
 
@@ -40,7 +41,7 @@ def findings_text(f):
     top = "\n".join(f"- {row.note}" for row in f["flags"].head(3).itertuples())
     hotspot = f["hotspot"]
     repeat = (
-        f"The strongest repeat location is in {hotspot.neighborhood}: {hotspot.requests} {hotspot.request_type} "
+        f"The strongest repeat location, leaving out facility addresses, is in {hotspot.neighborhood}: {hotspot.requests} {hotspot.request_type} "
         f"requests, {hotspot.repeats_within_30_days} of them within 30 days of the previous one.\n"
         if hotspot is not None
         else "No repeat locations were found.\n"
@@ -55,7 +56,7 @@ This page covers {f['requests']:,} service requests made between {f['first']} an
 
 The type of request with the longest slow cases is **{f['worst'].request_type}**: one in ten took more than {f['worst'].p90_days} days to close.
 
-These figures describe closed requests only. Requests that are still open are not counted, so true waits are longer.
+These figures describe closed requests only. Requests that are still open are not counted, so true waits are longer. The differences between neighborhoods are small, so request type matters far more than location.
 
 ## What is still open
 
@@ -65,6 +66,10 @@ These figures describe closed requests only. Requests that are still open are no
 
 {repeat}
 Some repeats are normal, such as a household booking several bulky waste pickups. Others may point to a problem that is not being fixed.
+
+## Tickets closed in bulk
+
+{int(f['batches'].requests.sum()):,} requests were closed in {len(f['batches'])} clean-up batches, where many old requests of one type closed on the same day. These look like record keeping rather than finished work, so they are left out of the wait times above. If they are not checked, they can make a backlog look smaller than it is.
 
 ## Unusual weeks
 
