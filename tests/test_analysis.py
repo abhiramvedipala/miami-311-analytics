@@ -34,7 +34,7 @@ def test_backlog_buckets_use_age_at_newest_row(small_db):
 
 def test_partial_latest_month_is_dropped(small_db):
     con = connect()
-    con.execute("INSERT INTO mart.fct_requests SELECT 'm', 33102, TIMESTAMP '2025-05-02 10:00:00', 1.0, false, false, 25.0, -80.0")
+    con.execute("INSERT INTO mart.fct_requests (request_type_key, neighborhood_key, created_at, days_to_close, is_duplicate, is_backlog) SELECT 'm', 33102, TIMESTAMP '2025-05-02 10:00:00', 1.0, false, false")
     months = run_analysis.run_all(con)["03_monthly_volume"]
     con.close()
     assert str(months.month.max())[:7] == "2025-04"
@@ -56,7 +56,9 @@ def test_batch_closures_leave_close_times_but_are_listed(small_db):
     con.execute(
         """
         INSERT INTO mart.fct_requests
-        SELECT 'p', 33101, TIMESTAMP '2025-01-01 09:00:00', 9000.0, false, false, 25.1, -80.1, true FROM range(300)
+            (request_type_key, neighborhood_key, created_at, closed_at, days_to_close, is_duplicate, is_backlog, is_bulk_close)
+        SELECT 'p', 33101, TIMESTAMP '2025-01-01 09:00:00', TIMESTAMP '2025-09-01 09:00:00', 9000.0, false, false, true
+        FROM range(300)
         """
     )
     result = run_analysis.run_all(con)
