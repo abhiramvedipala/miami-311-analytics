@@ -1,0 +1,21 @@
+version: 2
+models:
+  - name: stg_requests
+    columns:
+      - name: request_id
+        tests: [unique, not_null]
+      - name: created_at
+        tests: [not_null]
+      - name: status_group
+        tests:
+          - accepted_values:
+              arguments: {values: [open, closed, cancelled]}
+      - name: priority
+        tests:
+          - accepted_values:
+              arguments: {values: [Standard, High, Commissioner, Mayor]}
+seeds:
+  - name: request_type_crosswalk
+    columns:
+      - name: raw_label
+        tests: [unique, not_null]
