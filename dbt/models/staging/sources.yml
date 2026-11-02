@@ -1,0 +1,12 @@
+version: 2
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: service_requests
+      - name: ingest_state
+        description: One row per layer, stamped on every ingest even when no rows changed.
+        loaded_at_field: completed_at
+        freshness:
+          warn_after: {count: 8, period: day}
+          error_after: {count: 15, period: day}
