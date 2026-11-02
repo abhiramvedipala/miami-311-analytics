@@ -45,6 +45,8 @@ The data looks like one dataset but is two. On 2024-08-11 the county changed sys
 **Hardest problem**
 Keeping the numbers honest rather than getting the SQL to run. Time to close only exists for closed requests, which understates waits, especially recently. A partial latest month reads as a collapse in volume. Old-system open rows would inflate the backlog. Each needed an explicit rule, and the first two are stated as limits or handled in the query.
 
+The sharpest example came from the live run. `Bulky Waste Complaint` looked like the county's worst type, with a p90 of about a year and a median of 4 days. That gap made me look closer: thousands of them closed on two days in September 2026 at median ages of up to 630 days. That is record clean-up, not service time. I flag type-days with 200 or more closures at a median age of 60 days or more, leave them out of close times, and report them separately. The same largest batches appear at every threshold I tried. A similar check found that my top "hotspot" was one address with 24 unrelated request types, so it looked like a facility rather than a recurring problem.
+
 **Likely questions**
 1. *Why window functions for the percentiles?* `quantile_cont(...) OVER (PARTITION BY ...)` keeps the row-level input and lets me compute count, median and p90 over one named window. A `GROUP BY` would also work and is what I would use if nothing else needed the window; the ranking on top uses `rank()` either way.
 2. *How do you define a repeat request?* The same type at the same rounded coordinates, about 11 metres, within 30 days of the previous one, found with `lag()`. Some repeats are normal, such as bulky waste pickups, so this finds places to investigate rather than proving a failure.
@@ -109,3 +111,30 @@ Proving that the dashboard really works. The health endpoint in `check.sh` only 
 
 **Files to open**
 `dashboard/app.py`, `tests/test_dashboard.py`, `scripts/screenshots.py`
+
+## Phase 5: Automation
+
+**What I built**
+- A CI workflow that runs tests and the offline pipeline on every push, then verifies `RESULTS.md`.
+- A weekly workflow that runs the incremental load, dbt build and tests, then refreshes findings.
+- A generated plain-language page in `docs/findings.md`.
+- A generated results table in the README, so the numbers there come from the database.
+
+**Key decisions**
+- *Why does CI use sample rows?* It stays fast and does not fail when the county's API is down. Live data problems belong to the weekly job.
+- *Why GitHub Actions instead of Airflow?* One weekly linear job does not justify running a scheduler. Airflow would earn its place with many dependent pipelines.
+- *Why cache the database?* The load is incremental, so the cache saves a long backfill. A cache miss costs time but still gives a correct result.
+- *Why generate the findings page?* Hand-written numbers go stale. Generated text cannot drift from the data, though its wording has to hold up as the numbers change.
+
+**Hardest problem**
+Deciding what "fails loudly" means. `make all` stops at the first failing dbt test, so the commit step never runs and bad data cannot reach the published findings. The same rule applies to new source values: an unknown status or priority fails accepted values rather than dropping out of the metrics. That rule caught real unmapped priority codes on the first live build.
+
+**Likely questions**
+1. *What happens when the job fails?* The run goes red and GitHub notifies the repo owner. The last committed findings stay in place, so nothing wrong gets published. I would add a chat alert if a team depended on it.
+2. *Why is the freshness check on `ingest_state`?* It is stamped on every run, so it answers "did the pipeline run?". The county refreshes about monthly, so checking row dates would raise false alarms.
+3. *What happens if the cache is evicted?* The next run sees no database and does a full backfill. That is slower but correct, because the loader decides what to fetch from its stored watermarks.
+4. *What are the limits of the check script?* It runs on generated rows, so it proves the code works, not that live numbers are current. I ran a full live load separately, and each `RESULTS.md` section records whether it came from live data.
+5. *How do you stop the results being edited by hand?* Each section stores a SHA-256 of its body, and verification fails if the body changes. That catches accidents rather than a determined forger, who could recompute the hash, so rerunning the commands is the real proof.
+
+**Files to open**
+`.github/workflows/weekly.yml`, `.github/workflows/ci.yml`, `src/write_findings.py`, `scripts/check.sh`, `Makefile`
