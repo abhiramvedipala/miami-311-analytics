@@ -1,0 +1,35 @@
+version: 2
+models:
+  - name: fct_requests
+    columns:
+      - name: request_id
+        tests: [unique, not_null]
+      - name: created_at
+        tests: [not_null]
+      - name: status_group
+        tests:
+          - accepted_values:
+              arguments: {values: [open, closed, cancelled]}
+      - name: request_type_key
+        tests:
+          - relationships:
+              arguments: {to: ref('dim_request_type'), field: request_type_key}
+              config: {where: "request_type_key is not null"}
+      - name: neighborhood_key
+        tests:
+          - relationships:
+              arguments: {to: ref('dim_neighborhood'), field: neighborhood_key}
+              config: {where: "neighborhood_key is not null"}
+      - name: days_to_close
+        tests:
+          - non_negative
+  - name: dim_request_type
+    columns:
+      - name: request_type_key
+        tests: [unique, not_null]
+      - name: request_type
+        tests: [unique, not_null]
+  - name: dim_neighborhood
+    columns:
+      - name: neighborhood_key
+        tests: [unique, not_null]
