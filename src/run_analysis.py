@@ -26,6 +26,7 @@ def build_body(frames):
     worst = types.iloc[0]
     busiest = frames["06_weekday_hour"].sort_values("requests", ascending=False).iloc[0]
     months = frames["03_monthly_volume"]
+    batches = frames["07_bulk_closures"]
 
     area_rows = "\n".join(
         f"| {row.neighborhood} | {row.median_days} | {row.p90_days} | {row.closed_requests:,} |"
@@ -38,6 +39,7 @@ def build_body(frames):
 - Backlog (open new-system requests): **{int(backlog.open_requests.sum()):,}**
 - Worst p90 type: **{worst.request_type}**, {worst.p90_days} days at p90 and {worst.median_days} at median ({worst.closed_requests:,} closed requests)
 - Busiest slot: {busiest.weekday} at {busiest.hour}:00 Miami time ({busiest.requests:,} requests)
+- Batch closures left out of close times: {int(batches.requests.sum()):,} requests across {len(batches)} type-days
 - Complete months covered: {len(months)}; highest {months.requests.max():,}, lowest {months.requests.min():,}
 
 3 slowest neighborhoods by median days to close (at least 500 closed requests):
