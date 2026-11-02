@@ -47,5 +47,5 @@ dashboard: setup
 # Starts the dashboard on the live database, saves PNGs to docs/, stops it again.
 screenshots: setup
 	.venv/bin/playwright install chromium
-	.venv/bin/streamlit run dashboard/app.py --server.headless true --server.port 8501 & APP=$$!; \
+	.venv/bin/streamlit run dashboard/app.py --server.headless true --server.port 8501 --client.toolbarMode minimal & APP=$$!; \
 	$(PY) scripts/screenshots.py; STATUS=$$?; kill $$APP; exit $$STATUS
