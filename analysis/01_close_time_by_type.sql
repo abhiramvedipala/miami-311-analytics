@@ -1,10 +1,10 @@
 -- Question: What are the median and p90 days to close for each request type, and which types are slowest?
--- Types need 500 closed requests, so one odd ticket cannot top the list. Open requests are not counted.
+-- Types need 500 closed requests, so one odd ticket cannot top the list. Open requests and batch closures are not counted.
 WITH closed AS (
     SELECT types.request_type, facts.days_to_close
     FROM mart.fct_requests AS facts
     JOIN mart.dim_request_type AS types USING (request_type_key)
-    WHERE facts.days_to_close IS NOT NULL AND NOT facts.is_duplicate
+    WHERE facts.days_to_close IS NOT NULL AND NOT facts.is_duplicate AND NOT facts.is_bulk_close
 ),
 
 ranked AS (

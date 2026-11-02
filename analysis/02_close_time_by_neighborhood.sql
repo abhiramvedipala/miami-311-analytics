@@ -1,10 +1,10 @@
 -- Question: What are the median and p90 days to close in each neighborhood (ZIP), and which are slowest?
--- Neighborhoods need 500 closed requests. Open requests are not counted.
+-- Neighborhoods need 500 closed requests. Open requests and batch closures are not counted.
 WITH closed AS (
     SELECT areas.neighborhood, facts.days_to_close
     FROM mart.fct_requests AS facts
     JOIN mart.dim_neighborhood AS areas USING (neighborhood_key)
-    WHERE facts.days_to_close IS NOT NULL AND NOT facts.is_duplicate
+    WHERE facts.days_to_close IS NOT NULL AND NOT facts.is_duplicate AND NOT facts.is_bulk_close
 ),
 
 ranked AS (
