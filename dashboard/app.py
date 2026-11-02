@@ -47,7 +47,8 @@ with overview:
     kpis = query(
         """
         SELECT count(*) AS requests, count(*) FILTER (is_backlog) AS open_requests,
-               median(days_to_close) AS median_days, quantile_cont(days_to_close, 0.9) AS p90_days,
+               median(days_to_close) FILTER (NOT is_bulk_close) AS median_days,
+               quantile_cont(days_to_close, 0.9) FILTER (NOT is_bulk_close) AS p90_days,
                min(created_at)::date AS first_day, max(created_at)::date AS last_day
         FROM mart.fct_requests WHERE NOT is_duplicate
         """
@@ -57,7 +58,7 @@ with overview:
     columns[1].metric("Open backlog", f"{int(kpis.open_requests):,}")
     columns[2].metric("Median days to close", f"{kpis.median_days:.1f}")
     columns[3].metric("P90 days to close", f"{kpis.p90_days:.1f}")
-    st.caption(f"Requests created {kpis.first_day} to {kpis.last_day}. Duplicates excluded.")
+    st.caption(f"Requests created {kpis.first_day} to {kpis.last_day}. Duplicates excluded; close times also exclude batch clean-up closures.")
     monthly = analysis("03_monthly_volume")
     st.altair_chart(
         alt.Chart(monthly)
@@ -69,7 +70,7 @@ with overview:
     st.caption("The county changed 311 systems on 2024-08-11, so levels before and after are not fully comparable.")
 
 with close_times:
-    st.caption("Closed requests only, in groups with at least 500. Slowest 15 shown.")
+    st.caption("Closed requests only, in groups with at least 500, without batch clean-up closures. Slowest 15 shown.")
     by_type = analysis("01_close_time_by_type").sort_values("median_days", ascending=False)
     by_area = analysis("02_close_time_by_neighborhood")
     left, right = st.columns(2)
