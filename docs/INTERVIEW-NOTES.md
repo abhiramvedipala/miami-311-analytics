@@ -54,3 +54,31 @@ Keeping the numbers honest rather than getting the SQL to run. Time to close onl
 
 **Files to open**
 `analysis/01_close_time_by_type.sql`, `analysis/05_repeat_hotspots.sql`, `src/run_analysis.py`, `src/results.py`, `tests/test_analysis.py`
+
+## Phase 3: Anomaly detection
+
+**What I built**
+- Weekly volume per request type, with an STL seasonal and trend baseline.
+- Residual z-scores, flagged at an absolute value of 3.5 or more.
+- A plain-English note for each flag, and a match against storms and federal holidays.
+- A chance baseline, so the match rate can be judged fairly.
+- A validation script that plants spikes in simulated series and measures recall and false flags.
+
+**Key decisions**
+- *Why report a chance baseline?* Storm windows and holidays cover a large share of all weeks, so a match rate alone flatters the model. It only means something above the baseline.
+- *Why only crosswalked types?* A renamed label creates a false level shift at the system change. I also drop flags within two weeks of that date.
+- *Why not IsolationForest or Prophet?* STL is explainable to a non-technical reader as expected versus actual, needs no training, and was what the brief called for.
+- *Why load from 2021?* The validation table shows recall rising with history, so I extended the load rather than accept weak detection.
+
+**Hardest problem**
+Robust STL hid the biggest spikes, which are the storms I most wanted to find. A very large spike leaks into its week-of-year group on the first pass, the whole group gets zero weight, and STL falls back to the raw value, so the spike becomes "seasonal". A +100 spike was caught while a +200 spike vanished. I found it by testing many spike sizes rather than one. The fix masks outliers with a rolling median, refits, then scores the original series against the clean fit. Masking with the fitted value did not work, because that value was itself polluted.
+
+**Likely questions**
+1. *Why not use the standard deviation of the residuals for z?* With only a few yearly cycles, STL fits ordinary weeks almost exactly, so residual spread is too small and everything gets flagged. I estimate noise from the median absolute deviation of week-to-week changes divided by the square root of two, which does not depend on the fit.
+2. *How did you validate it with no labels?* I planted spikes at known weeks in simulated series with fixed seeds, then measured recall and false flags by spike size and history length. That tests the method, while the event match checks real data. The numbers are in the validation section of `RESULTS.md`.
+3. *What does the match rate tell you?* It tells you how often flags coincide with a listed event, compared with how often any week would by chance. It does not prove cause, and the event list is incomplete, so unmatched flags may still be real.
+4. *What are the method's weak spots?* Small spikes near the noise level are often missed, as the validation table shows. A sustained shift goes into the trend rather than being flagged. Low-volume types are skipped.
+5. *How would you run this in production?* Score new weeks against a baseline fitted on past data only, because refitting on all data lets future weeks influence past scores. Then route flags to the responsible department and track which ones were useful, so the threshold can be tuned.
+
+**Files to open**
+`src/anomaly.py`, `src/validate_anomaly.py`, `tests/test_anomaly.py`, `dbt/seeds/known_events.csv`
