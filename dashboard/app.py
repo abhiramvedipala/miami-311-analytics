@@ -30,7 +30,7 @@ def bar_chart(frame, label, title):
         .mark_bar()
         .encode(
             x=alt.X("median_days:Q", title="Median days to close"),
-            y=alt.Y(f"{label}:N", sort="-x", title=None, axis=alt.Axis(labelLimit=320)),
+            y=alt.Y(f"{label}:N", sort="-x", title=None, axis=alt.Axis(labelLimit=320, labelOverlap=False)),
             tooltip=[label, "median_days", "p90_days", "closed_requests"],
         )
         .properties(title=title, height=TOP_N * 24)
@@ -49,7 +49,7 @@ with overview:
         SELECT count(*) AS requests, count(*) FILTER (is_backlog) AS open_requests,
                median(days_to_close) FILTER (NOT is_bulk_close) AS median_days,
                quantile_cont(days_to_close, 0.9) FILTER (NOT is_bulk_close) AS p90_days,
-               min(created_at)::date AS first_day, max(created_at)::date AS last_day
+               strftime(min(created_at), '%Y-%m-%d') AS first_day, strftime(max(created_at), '%Y-%m-%d') AS last_day
         FROM mart.fct_requests WHERE NOT is_duplicate
         """
     ).iloc[0]
@@ -99,7 +99,7 @@ with backlog:
 with anomalies:
     flags = query(
         """
-        SELECT week_start::date AS week_start, request_type, round(z, 1) AS z, requests, round(expected) AS expected,
+        SELECT strftime(week_start, '%Y-%m-%d') AS week_start, request_type, round(z, 1) AS z, requests, round(expected) AS expected,
                event, note
         FROM mart.anomalies ORDER BY abs(z) DESC
         """
@@ -115,7 +115,7 @@ with anomalies:
             SELECT facts.latitude, facts.longitude
             FROM mart.fct_requests AS facts
             JOIN mart.dim_request_type AS types USING (request_type_key)
-            WHERE types.request_type = ? AND date_trunc('week', facts.created_at)::date = ?
+            WHERE types.request_type = ? AND strftime(date_trunc('week', facts.created_at), '%Y-%m-%d') = ?
               AND facts.latitude IS NOT NULL AND facts.longitude IS NOT NULL AND NOT facts.is_duplicate
             """,
             [chosen.request_type, chosen.week_start],
