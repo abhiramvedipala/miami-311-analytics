@@ -14,3 +14,4 @@ One line each: decision + why.
 - check.sh runs the pipeline on generated offline rows, because three fresh-clone runs should not re-download over a million rows from a public API; live results are protected by a hash and source label in RESULTS.md.
 - Private build notes stay out of the repo, because the project does not need them.
 - uv is the only install prerequisite, because it provides Python 3.12 (system Python is 3.14, too new for dbt).
+- Priority codes HURRACT and MH map to Other and nulls to Unspecified, because their meaning is undocumented and rows are few; any new code still fails the build.

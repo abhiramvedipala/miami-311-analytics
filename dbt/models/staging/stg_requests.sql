@@ -39,7 +39,9 @@ select
         else 'unknown'
     end as status_group,
     upper(raw_status) = 'DUP' or upper(raw_status) like '%DUPLICATE%' as is_duplicate,
-    case raw_priority
+    case
+        when raw_priority is null then 'Unspecified'
+        else case raw_priority
         when 'STANDARD' then 'Standard'
         when 'HIGH' then 'High'
         when 'EMERGNCY' then 'High'
@@ -47,7 +49,10 @@ select
         when 'COMMISSIONER' then 'Commissioner'
         when 'COMMSNR' then 'Commissioner'
         when 'MAYOR' then 'Mayor'
+        when 'HURRACT' then 'Other'
+        when 'MH' then 'Other'
         else 'unknown'
+        end
     end as priority,
     case
         when raw_municipality is null then 'UNKNOWN'

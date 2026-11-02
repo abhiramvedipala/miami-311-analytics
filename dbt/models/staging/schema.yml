@@ -13,7 +13,7 @@ models:
       - name: priority
         tests:
           - accepted_values:
-              arguments: {values: [Standard, High, Commissioner, Mayor]}
+              arguments: {values: [Standard, High, Commissioner, Mayor, Other, Unspecified]}
 seeds:
   - name: request_type_crosswalk
     columns:
