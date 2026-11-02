@@ -111,12 +111,21 @@ def describe(row):
     return text + (f" Overlaps {row.event}." if row.event else " No listed event overlaps this week.")
 
 
-def build_body(flags, weeks, windows):
+def storm_rates(flags, all_weeks, windows, storm_names):
+    """Return (% of above-expected flags in a storm window, % of all weeks in one)."""
+    above = flags[flags.requests > flags.expected]
+    storm_windows = [window for window in windows if window[0] in storm_names]
+    baseline = sum(match_event(week, storm_windows) is not None for week in all_weeks) / len(all_weeks)
+    return 100 * above.event.isin(storm_names).mean(), 100 * baseline
+
+
+def build_body(flags, weeks, windows, storm_names):
     top = flags.head(10)
     all_weeks = sorted(weeks)
     base_rate = 100 * sum(match_event(week, windows) is not None for week in all_weeks) / len(all_weeks)
     top_rate = 100 * top.event.notna().mean()
     all_rate = 100 * flags.event.notna().mean()
+    storm_rate, storm_base = storm_rates(flags, all_weeks, windows, storm_names)
     rows = "\n".join(
         f"| {row.week_start.date()} | {row.request_type} | {row.z:.1f} | {row.note} |" for row in top.itertuples()
     )
@@ -125,6 +134,9 @@ def build_body(flags, weeks, windows):
 - Known-event match rate, top 10: **{top_rate:.0f}%**
 - Known-event match rate, all flags: **{all_rate:.0f}%**
 - Chance baseline, share of all weeks overlapping a listed event: **{base_rate:.0f}%**
+- Storms only, flags above expected inside a storm window: **{storm_rate:.0f}%**, against **{storm_base:.0f}%** of all weeks
+
+A holiday lining up with a surge is usually coincidence, so the storm-only line is the stricter test.
 
 A match rate only means something above the baseline.
 
@@ -150,7 +162,7 @@ def main():
     flags = flags.reindex(flags.z.abs().sort_values(ascending=False).index).reset_index(drop=True)
 
     con.execute("CREATE OR REPLACE TABLE mart.anomalies AS SELECT * FROM flags")
-    write_section("anomaly", build_body(flags, weeks, windows), "python src/anomaly.py", data_source(con))
+    write_section("anomaly", build_body(flags, weeks, windows, set(storms.name)), "python src/anomaly.py", data_source(con))
     print(f"{len(flags)} flags")
     con.close()
 

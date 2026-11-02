@@ -45,3 +45,17 @@ def test_short_or_sparse_series_are_skipped():
         pd.DataFrame({"week_start": weeks[:50], "request_type": "short", "requests": 100}),
     ]
     assert set(anomaly.score_all(pd.concat(frames)).request_type) == {"busy"}
+
+
+def test_storm_rate_counts_only_surges_in_storm_windows():
+    storms = pd.DataFrame({"name": ["Milton"], "start_date": ["2024-10-07"], "end_date": ["2024-10-10"]})
+    weeks = list(pd.date_range("2024-09-30", periods=10, freq="7D"))
+    windows = anomaly.event_windows(storms, weeks[0], weeks[-1])
+    flags = pd.DataFrame({
+        "requests": [50, 50, 1],
+        "expected": [10, 10, 10],
+        "event": ["Milton", "Thanksgiving Day", "Milton"],
+    })
+    surge_rate, baseline = anomaly.storm_rates(flags, weeks, windows, {"Milton"})
+    assert surge_rate == 50  # the dip is ignored and the holiday surge does not count
+    assert baseline == 30  # Milton's week plus the two weeks of its reporting lag
