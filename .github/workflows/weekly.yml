@@ -1,0 +1,31 @@
+name: Weekly refresh
+on:
+  schedule:
+    - cron: "0 9 * * 1"  # Mondays 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      # A cache miss means a full backfill, which is slow but correct.
+      - uses: actions/cache@v4
+        with:
+          path: data/miami311.duckdb
+          key: duckdb-${{ github.run_id }}
+          restore-keys: duckdb-
+      # Any failing dbt test stops the job here, before findings are refreshed.
+      - run: make all
+      - name: Commit refreshed findings
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add RESULTS.md README.md docs/findings.md
+          git diff --cached --quiet || git commit -m "Refresh findings"
+          git push
