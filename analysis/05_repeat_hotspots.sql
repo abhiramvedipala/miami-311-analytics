@@ -1,6 +1,15 @@
 -- Question: Where does the same problem keep coming back?
 -- A repeat is a request of the same type at the same point (about 11 m) within 30 days of the previous one.
-WITH located AS (
+-- Points with 10 or more request types are left out: unrelated problems sharing one spot means a facility
+-- or default address, not a location with recurring trouble. Police assistance is inter-agency work.
+WITH shared_points AS (
+    SELECT round(latitude, 4) AS latitude, round(longitude, 4) AS longitude
+    FROM mart.fct_requests
+    GROUP BY 1, 2
+    HAVING count(DISTINCT request_type_key) >= 10
+),
+
+located AS (
     SELECT
         types.request_type,
         areas.neighborhood,
@@ -14,7 +23,10 @@ WITH located AS (
     FROM mart.fct_requests AS facts
     JOIN mart.dim_request_type AS types USING (request_type_key)
     JOIN mart.dim_neighborhood AS areas USING (neighborhood_key)
+    ANTI JOIN shared_points
+        ON round(facts.latitude, 4) = shared_points.latitude AND round(facts.longitude, 4) = shared_points.longitude
     WHERE NOT facts.is_duplicate AND facts.latitude IS NOT NULL AND facts.longitude IS NOT NULL
+        AND types.request_type NOT IN ('ASU POLICE ASSISTANCE', 'Police Request for ASD Assistance')
 )
 
 SELECT
