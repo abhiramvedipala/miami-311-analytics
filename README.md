@@ -69,3 +69,10 @@ To open the dashboard after `make all`:
 ```bash
 make dashboard
 ```
+
+## Results
+
+Each number below comes from a script. `RESULTS.md` names the command for each section, and `make all` reruns them all.
+
+<!-- results:start -->
+<!-- results:end -->
